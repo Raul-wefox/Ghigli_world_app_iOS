@@ -14,15 +14,38 @@ struct FilmListView: View {
     var body: some View {
         
         VStack() {
-            Text("init staus")
-        }
-        
-        ScrollView {
-            ForEach(viewModel.filmList) { film in
-                Text(film.title)
+            switch viewModel.status {
+            case .idle:
+                idleView()
+            case .loading:
+                loadingView()
+            case .success:
+                successView()
+            case .error:
+                errorView()
             }
         }.onAppear{
             viewModel.getFilmList()
         }
+    }
+    
+    private func idleView() -> some View {
+        Text("init staus")
+    }
+    
+    private func successView() -> some View {
+        ScrollView {
+            ForEach(viewModel.filmList) { film in
+                Text(film.title)
+            }
+        }
+    }
+    
+    private func loadingView() -> some View {
+        Text("Loading")
+    }
+    
+    private func errorView() -> some View {
+        Text("ERROR!!!!!!!!")
     }
 }
