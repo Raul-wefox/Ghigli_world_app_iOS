@@ -7,48 +7,40 @@
 
 import Foundation
 import Combine
+import Alamofire
 
 class ApiManager {
     
-    var baseURL: URL
-    var session: URLSession
-    
-    init(baseURL: String, session: URLSession = URLSession.shared) {
+    func performRequest<T: Decodable>(
+        url: String,
+        method: HTTPMethod,
+        headers: HTTPHeaders = [],
+        queryParams: Parameters = [:]
+    ) -> AnyPublisher<T, Error> {
         
-        self.baseURL = URL(string: baseURL)!
-        self.session = session
+        let decoder = JSONDecoder()
+        decoder.keyDecodingStrategy = .convertFromSnakeCase
+        
+        return AF.request(
+            url,
+            method: method,
+            parameters: queryParams,
+            headers: addCustomHeaderToDefaultHeaders(customHeaders: headers))
+        .validate()
+        .publishDecodable(type: T.self, decoder: decoder)
+        .value()
+        .mapError { $0 as Error }
+        .receive(on: DispatchQueue.main)
+        .eraseToAnyPublisher()
     }
     
-    func performRequest<T: Decodable>(urlRequest: URLRequest) -> AnyPublisher<T, Error> {
+    private func addCustomHeaderToDefaultHeaders(customHeaders: HTTPHeaders) -> HTTPHeaders {
+        var headers: HTTPHeaders = [
+            "Accept": "application/json"]
         
-        return session.dataTaskPublisher(for: urlRequest)
-            .mapError { $0 as Error }
-            .tryMap { data, response -> Data in
-                
-                guard let httpResponse = response as? HTTPURLResponse else {
-                    throw HttpError.invalidResponse
-                }
-                
-                let statusCode = httpResponse.statusCode
-                
-                guard (200..<300).contains(statusCode) else {
-                    throw HttpError.invalidStatusCode
-                }
-                
-                return data
-            }
-            .eraseToAnyPublisher()
-            .flatMap { data -> AnyPublisher<T, Error> in
-                
-                let decoder = JSONDecoder()
-                decoder.keyDecodingStrategy = .convertFromSnakeCase
-                
-                return Result.Publisher(data)
-                    .setFailureType(to: Error.self)
-                    .decode(type: T.self, decoder: decoder)
-                    .eraseToAnyPublisher()
-            }
-            .mapError { $0 as Error }
-            .eraseToAnyPublisher()
+        customHeaders.forEach { customeHeader in
+            headers.add(customeHeader)
+        }
+        return headers
     }
 }
