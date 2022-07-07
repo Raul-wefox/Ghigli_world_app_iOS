@@ -49,3 +49,11 @@ struct FilmListView: View {
         Text("ERROR!!!!!!!!")
     }
 }
+
+
+struct FilmListView_Previews: PreviewProvider{
+    
+    static var previews: some View {
+        FilmListView(viewModel: FilmsListViewModel())
+    }
+}
